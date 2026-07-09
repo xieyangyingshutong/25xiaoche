@@ -2,67 +2,61 @@
 #include "board.h"
 
 volatile unsigned long tick_ms;
-volatile uint32_t start_time;
 
 
 void SysTick_Init(void)
 {
-    DL_SYSTICK_config(CPUCLK_FREQ / 1000);  // 每毫秒产生一次中断
+    DL_SYSTICK_config(CPUCLK_FREQ / 1000);  // Generate interrupt every 1ms
     NVIC_SetPriority(SysTick_IRQn, 0);
 }
 
 
-////返回SysTick计数值
+// Get current SysTick counter value (24-bit down-counter)
 uint32_t Systick_getTick(void)
 {
 	return (SysTick ->VAL);
 }
 
-
-//ms阻塞延迟
-void delay_ms(uint32_t ms)
+// SysTick interrupt: increment millisecond counter every 1ms
+void SysTick_Handler(void)
 {
-	//超出能满足的最大延迟
-	//if( ms > SysTickMAX_COUNT/(SysTickFre/1000) ) ms = SysTickMAX_COUNT/(SysTickFre/1000);
-	for(int i=0;i<1000;i++)
-	{
-		delay_us(ms);
-	}
+    tick_ms++;
 }
 
-//void delay_ms(uint32_t ms)
-//{
-//    uint32_t start = Systick_getTick();
-//    while((Systick_getTick() - start) < ms);
-//}
+// ms delay using tick_ms (SysTick-based millisecond counter)
+void delay_ms(uint32_t ms)
+{
+    uint32_t start = tick_ms;
+    while ((tick_ms - start) < ms);
+}
 
-
+// us delay using SysTick down-counter busy-wait
 void delay_us(uint32_t us)
 {
 	if( us > SysTickMAX_COUNT/(SysTickFre/1000000) ) us = SysTickMAX_COUNT/(SysTickFre/1000000);
-	
-	us = us*(SysTickFre/1000000); //单位转换
-	
-	//用于保存已走过的时间
+
+	us = us*(SysTickFre/1000000); // Unit conversion
+
+	// Variable to store elapsed time
 	uint32_t runningtime = 0;
-	
-	//获得当前时刻的计数值
+
+	// Get current tick count
 	uint32_t InserTick = Systick_getTick();
-	
-	//用于刷新实时时间
+
+	// Refresh real-time timer
 	uint32_t tick = 0;
-	
+
 	uint8_t countflag = 0;
-	//等待延迟
+	// Wait for delay
 	while(1)
 	{
-		tick = Systick_getTick();//刷新当前时刻计数值
-		
-		if( tick > InserTick ) countflag = 1;//出现溢出轮询,则切换走时的计算方式
-		
+		tick = Systick_getTick(); // Refresh current tick count
+
+		if( tick > InserTick ) countflag = 1; // Counter wrap handling
+
 		if( countflag ) runningtime = InserTick + SysTickMAX_COUNT - tick;
 		else runningtime = InserTick - tick;
-		
+
 		if( runningtime>=us ) break;
 	}
 
@@ -72,9 +66,9 @@ void delay_1us(unsigned long __us){ delay_us(__us); }
 void delay_1ms(unsigned long ms){ delay_ms(ms); }
 
 #if !defined(__MICROLIB)
-//不使用微库的话就需要添加下面的函数
+// When not using Microlib, need to implement these functions
 #if (__ARMCLIB_VERSION <= 6000000)
-//如果编译器是AC5  就定义下面这个结构体
+// For AC5 compiler, define FILE struct
 struct __FILE
 {
 	int handle;
@@ -83,21 +77,20 @@ struct __FILE
 
 FILE __stdout;
 
-//定义_sys_exit()以避免使用半主机模式
+// Define _sys_exit() to avoid using semihosting mode
 void _sys_exit(int x)
 {
 	x = x;
 }
 #endif
 
-//printf函数重定义
+// printf redirect
 int fputc(int ch, FILE *stream)
 {
-	//当串口0忙的时候等待，不忙的时候再发送传进来的字符
+	// When UART0 busy, wait; when idle, send next character
 	while( DL_UART_isBusy(UART_0_INST) == true );
-	
+
 	DL_UART_Main_transmitData(UART_0_INST, ch);
-	
+
 	return ch;
 }
-

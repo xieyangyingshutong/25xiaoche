@@ -12,7 +12,7 @@
 #define ABS(a)      (a>0 ? a:(-a))
 
 // board.h
-extern volatile unsigned long tick_ms;  // Ìí¼ÓÕâĞĞ
+extern volatile unsigned long tick_ms;  // millisecond counter
 typedef int32_t  s32;
 typedef int16_t s16;
 typedef int8_t  s8;
@@ -46,7 +46,7 @@ typedef __I uint16_t vuc16;  /*!< Read Only */
 typedef __I uint8_t vuc8;   /*!< Read Only */
 
 // Enumeration of car types
-//Ğ¡³µĞÍºÅµÄÃ¶¾Ù¶¨Òå
+//Ğ¡ï¿½ï¿½ï¿½ÍºÅµï¿½Ã¶ï¿½Ù¶ï¿½ï¿½ï¿½
 typedef enum 
 {
 	Mec_Car = 0, 
@@ -58,13 +58,13 @@ typedef enum
 } CarMode;
 
 extern int Flag_Stop;
-//Systick×î´ó¼ÆÊıÖµ,24Î»
+//Systickï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ,24Î»
 #define SysTickMAX_COUNT 0xFFFFFF
 
-//Systick¼ÆÊıÆµÂÊ
+//Systickï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½
 #define SysTickFre 80000000
 
-//½«systickµÄ¼ÆÊıÖµ×ª»»Îª¾ßÌåµÄÊ±¼äµ¥Î»
+//ï¿½ï¿½systickï¿½Ä¼ï¿½ï¿½ï¿½Öµ×ªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½äµ¥Î»
 #define SysTick_MS(x)  ((SysTickFre/1000U)*(uint32_t)(x))
 #define SysTick_US(x)  ((SysTickFre/1000000U)*(uint32_t)(x))
 

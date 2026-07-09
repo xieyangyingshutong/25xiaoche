@@ -1,16 +1,16 @@
 #include "encoder.h"
 #include "led.h"
-uint32_t gpio_interrup1,gpio_interrup2;
-int Get_Encoder_countA,Get_Encoder_countB;
-int32_t encoderA_cnt,PWMA,encoderB_cnt,PWMB;
+volatile uint32_t gpio_interrup1,gpio_interrup2;
+volatile int Get_Encoder_countA,Get_Encoder_countB;
+volatile int32_t encoderA_cnt,PWMA,encoderB_cnt,PWMB;
 /*******************************************************
-º¯Êý¹¦ÄÜ£ºÍâ²¿ÖÐ¶ÏÄ£Äâ±àÂëÆ÷ÐÅºÅ
-Èë¿Úº¯Êý£ºÎÞ
-·µ»Ø  Öµ£ºÎÞ
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½â²¿ï¿½Ð¶ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½
+ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½  Öµï¿½ï¿½ï¿½ï¿½
 ***********************************************************/
 void GROUP1_IRQHandler(void)
 {
-	//»ñÈ¡ÖÐ¶ÏÐÅºÅ
+	//ï¿½ï¿½È¡ï¿½Ð¶ï¿½ï¿½Åºï¿½
     gpio_interrup1 = DL_GPIO_getEnabledInterruptStatus(ENCODERA_PORT,ENCODERA_E1A_PIN|ENCODERA_E1B_PIN);
     gpio_interrup2 = DL_GPIO_getEnabledInterruptStatus(ENCODERB_PORT,ENCODERB_E2A_PIN|ENCODERB_E2B_PIN);
     
@@ -66,27 +66,27 @@ void GROUP1_IRQHandler(void)
 	DL_GPIO_clearInterruptStatus(ENCODERB_PORT,ENCODERB_E2A_PIN|ENCODERB_E2B_PIN);
 }
 
-//10ms¶¨Ê±ÖÐ¶Ï
+//10msï¿½ï¿½Ê±ï¿½Ð¶ï¿½
 //void TIMER_0_INST_IRQHandler(void)
 //{
 //    if(DL_TimerA_getPendingInterrupt(TIMER_0_INST))
 //    {
 //        if(DL_TIMER_IIDX_ZERO)
 //        {
-//			LED_Flash(100);//ledÉÁË¸
-//			Key();//»ñÈ¡µ±Ç°BLS°´¼ü×´Ì¬
-//			encoderA_cnt = Get_Encoder_countA;//Á½¸öµç»ú°²×°Ïà·´£¬ÆäÖÐÒ»¸ö±àÂëÆ÷ÖµÐèÒªÏà·´
+//			LED_Flash(100);//ledï¿½ï¿½Ë¸
+//			Key();//ï¿½ï¿½È¡ï¿½ï¿½Ç°BLSï¿½ï¿½ï¿½ï¿½×´Ì¬
+//			encoderA_cnt = Get_Encoder_countA;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½à·´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½Òªï¿½à·´
 //			encoderB_cnt = -Get_Encoder_countB;
 //			Get_Encoder_countA=Get_Encoder_countB=0;
-//			if(!Flag_Stop)//µ¥»÷BLS¿ªÆô»ò¹Ø±Õµç»ú
+//			if(!Flag_Stop)//ï¿½ï¿½ï¿½ï¿½BLSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø±Õµï¿½ï¿½
 //			{
-//				PWMA = -Velocity_A(-15,encoderA_cnt);//PID¿ØÖÆ
-//				PWMB = -Velocity_B(-15,encoderB_cnt);//PID¿ØÖÆ
-//				//·½²¨ÏÞ·ù(-7999~7999),ÆµÂÊ10khz
+//				PWMA = -Velocity_A(-15,encoderA_cnt);//PIDï¿½ï¿½ï¿½ï¿½
+//				PWMB = -Velocity_B(-15,encoderB_cnt);//PIDï¿½ï¿½ï¿½ï¿½
+//				//ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½(-7999~7999),Æµï¿½ï¿½10khz
 //				PWMA=limit_PWM(PWMA,-7999,7999);
 //				PWMB=limit_PWM(PWMB,-7999,7999);
-//				Set_PWM(PWMA,PWMB);//PWM²¨Çý¶¯µç»ú
-//			}else Set_PWM(0,0);//¹Ø±Õµç»ú
+//				Set_PWM(PWMA,PWMB);//PWMï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//			}else Set_PWM(0,0);//ï¿½Ø±Õµï¿½ï¿½
 //			
 //		}
 //    }
@@ -94,14 +94,14 @@ void GROUP1_IRQHandler(void)
 
 void TIMER_0_INST_IRQHandler(void)
 {
-	//±àÂëÆ÷ËÙ¶È¼ÆËã
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¼ï¿½ï¿½ï¿½
 	if( DL_TimerG_getPendingInterrupt(TIMER_0_INST) == DL_TIMER_IIDX_ZERO)
 	{
-        /* Á½¸öµç»ú°²×°Ïà·´£¬ËùÒÔ±àÂëÆ÷ÖµÒ²ÒªÏà·´ */
+        /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½à·´ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÒ²Òªï¿½à·´ */
         encoderA_cnt = Get_Encoder_countA;
         encoderB_cnt = -Get_Encoder_countB;
 
-        /* ±àÂëÆ÷¼ÆÊýÖµÇåÁã */
+        /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ */
         Get_Encoder_countA = 0;
         Get_Encoder_countB = 0;
 	}
