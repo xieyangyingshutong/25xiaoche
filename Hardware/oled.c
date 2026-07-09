@@ -1,21 +1,36 @@
 #include "oled.h"
 #include "oled_font.h"
+#include "board.h"
 #include "ti_msp_dl_config.h"
 
 
 #define OLED_ADDR 0x3C
+#define OLED_I2C_TIMEOUT_MS 20U
+
+static uint8_t oledI2cFault = 0U;
 
 void OLED_I2C_Init(void) {}
 
 // 向OLED寄存器地址写一个byte的数据
 int I2C_WriteByte(uint8_t addr, uint8_t data) {
   uint8_t buff[2] = {0};
+  uint32_t start;
+
+  if (oledI2cFault != 0U) {
+    return -4;
+  }
+
   buff[0] = addr;
   buff[1] = data;
   /* Wait for I2C to be Idle */
+  start = tick_ms;
   while (!(DL_I2C_getControllerStatus(I2C_OLED_INST) &
-           DL_I2C_CONTROLLER_STATUS_IDLE))
-    ;
+           DL_I2C_CONTROLLER_STATUS_IDLE)) {
+    if ((uint32_t)(tick_ms - start) >= OLED_I2C_TIMEOUT_MS) {
+      oledI2cFault = 1U;
+      return -1;
+    }
+  }
 
   /* Send the packet to the controller.
    * This function will send Start + Stop automatically.
@@ -24,15 +39,20 @@ int I2C_WriteByte(uint8_t addr, uint8_t data) {
                                  DL_I2C_CONTROLLER_DIRECTION_TX, 2);
   DL_I2C_fillControllerTXFIFO(I2C_OLED_INST, &buff[0], 2);
   /* Poll until the Controller writes all bytes */
+  start = tick_ms;
   while (DL_I2C_getControllerStatus(I2C_OLED_INST) &
-         DL_I2C_CONTROLLER_STATUS_BUSY_BUS)
-    ;
+         DL_I2C_CONTROLLER_STATUS_BUSY_BUS) {
+    if ((uint32_t)(tick_ms - start) >= OLED_I2C_TIMEOUT_MS) {
+      oledI2cFault = 1U;
+      return -2;
+    }
+  }
 
   /* Trap if there was an error */
   if (DL_I2C_getControllerStatus(I2C_OLED_INST) &
       DL_I2C_CONTROLLER_STATUS_ERROR) {
-    /* LED will remain high if there is an error */
-    __BKPT(0);
+    oledI2cFault = 1U;
+    return -3;
   }
   return 0;
 }

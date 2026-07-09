@@ -34,61 +34,40 @@
 #include "PID.h"
 #include "oled.h"
 
-//定义/声明变量和常量
-extern int carRunning; 
-
-//定义函数体
-void Line_Tracking_Control(void); 
-
 int main(void)
 {
-	int i=0;
-	
     SYSCFG_DL_init();
-	DL_Timer_startCounter(PWM_0_INST);
-	NVIC_ClearPendingIRQ(ENCODERA_INT_IRQN);
+    /* Use the 1 ms tick required by delay_ms(), key debounce and lap timing. */
+    SysTick_Init();
+    DL_Timer_startCounter(PWM_0_INST);
+    NVIC_ClearPendingIRQ(ENCODERA_INT_IRQN);
     NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);
-	NVIC_EnableIRQ(ENCODERA_INT_IRQN);
+    NVIC_EnableIRQ(ENCODERA_INT_IRQN);
     NVIC_EnableIRQ(ENCODERB_INT_IRQN);
-	NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
-	NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
-	delay_ms(100);
-	OLED_Init();
-	OLED_CLS();
-	OLED_UpdateTarget();
-    OLED_ShowString(3, 1, "waiting", 1);
+    NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
+    NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
+    delay_ms(100);
+    OLED_Init();
+    OLED_CLS();
+    OLED_UpdateTarget();
+    OLED_UpdateProgress();
+    OLED_UpdateStatus();
     Set_PWM(0,0);
-	
-    while (1) 
+
+    while (1)
     {
-//			Key();
-//			if (!Flag_Stop)
-//			{
-//			Update_Sensor_State();
-//			printf("L2:%d L1:%d M:%d R1:%d R2:%d | Track: %.2f | L:%d R:%d\n", 
-//       L2, L1, M, R1, R2, Track, (int)LeftSpeed, (int)RightSpeed);
-			Handle_Keys();
+        Handle_Keys();
         if (carRunning) {
-            Line_Tracking_Control();
-            Check_L2_Update();
+            if (Line_Tracking_Control() != 0U) {
+                Check_L2_Update();
+            } else {
+                Stop_Car_OnLineLost();
+            }
         } else {
             Set_PWM(0,0);
         }
-		OLED_UpdateStatus();
-    OLED_UpdateDebug(); 
+        OLED_UpdateStatus();
+        OLED_UpdateDebug();
+        delay_ms(5);
     }
-//			Line_Tracking_Control();
-//			Key_Display();
-////			}
-////			else
-////			{
-////				Set_PWM(0,0);
-////			}
-//			uint8_t key1_state = DL_GPIO_readPins(KEY_KEY1_PORT, KEY_KEY1_PIN);
-//			uint8_t key2_state = DL_GPIO_readPins(KEY_KEY2_PORT, KEY_KEY2_PIN);
-//			printf("Key1=%d, Key2=%d\r\n", key1_state, key2_state);
-
-			delay_ms(5);//5?
-    }
-
-
+}

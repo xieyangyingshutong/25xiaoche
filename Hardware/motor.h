@@ -3,6 +3,8 @@
 #include "ti_msp_dl_config.h"
 #include "board.h"
 
+#define MOTOR_PWM_MAX_DUTY 8000
+
 int Velocity_A(int TargetVelocity, int CurrentVelocity);
 int Velocity_B(int TargetVelocity, int CurrentVelocity);
 void Set_PWM(int pwmA,int pwmB);

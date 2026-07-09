@@ -1,20 +1,20 @@
 #include "motor.h"
-float Velcity_Kp=1.0,  Velcity_Ki=0.4,  Velcity_Kd; //Ïà¹ØËÙ¶ÈPID²ÎÊý
+float Velcity_Kp=1.0,  Velcity_Ki=0.4; //ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½PIDï¿½ï¿½ï¿½ï¿½
 /***********************************************
-¹«Ë¾£ºÂÖÈ¤¿Æ¼¼£¨¶«Ý¸£©ÓÐÏÞ¹«Ë¾
-Æ·ÅÆ£ºWHEELTEC
-¹ÙÍø£ºwheeltec.net
-ÌÔ±¦µêÆÌ£ºshop114407458.taobao.com 
-ËÙÂôÍ¨: https://minibalance.aliexpress.com/store/4455017
-°æ±¾£ºV1.0
-ÐÞ¸ÄÊ±¼ä£º2024-07-019
+ï¿½ï¿½Ë¾ï¿½ï¿½ï¿½ï¿½È¤ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½Þ¹ï¿½Ë¾
+Æ·ï¿½Æ£ï¿½WHEELTEC
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wheeltec.net
+ï¿½Ô±ï¿½ï¿½ï¿½ï¿½Ì£ï¿½shop114407458.taobao.com 
+ï¿½ï¿½ï¿½ï¿½Í¨: https://minibalance.aliexpress.com/store/4455017
+ï¿½æ±¾ï¿½ï¿½V1.0
+ï¿½Þ¸ï¿½Ê±ï¿½ä£º2024-07-019
 
 Brand: WHEELTEC
 Website: wheeltec.net
 Taobao shop: shop114407458.taobao.com 
 Aliexpress: https://minibalance.aliexpress.com/store/4455017
 Version: V1.0
-Update£º2024-07-019
+Updateï¿½ï¿½2024-07-019
 
 All rights reserved
 ***********************************************/
@@ -28,6 +28,11 @@ int limit_PWM(int value,int low,int high)
 
 void Set_PWM(int pwmA, int pwmB)
 {
+    /* The configured PWM timer period is 8000.  Keep every caller inside
+     * that range before writing a capture/compare register. */
+    pwmA = limit_PWM(pwmA, -MOTOR_PWM_MAX_DUTY, MOTOR_PWM_MAX_DUTY);
+    pwmB = limit_PWM(pwmB, -MOTOR_PWM_MAX_DUTY, MOTOR_PWM_MAX_DUTY);
+
     if (pwmA > 0) {
         DL_GPIO_setPins(AIN_PORT, AIN_AIN1_PIN);
         DL_GPIO_clearPins(AIN_PORT, AIN_AIN2_PIN);
@@ -36,7 +41,7 @@ void Set_PWM(int pwmA, int pwmB)
         DL_GPIO_setPins(AIN_PORT, AIN_AIN2_PIN);
         DL_GPIO_clearPins(AIN_PORT, AIN_AIN1_PIN);
         DL_Timer_setCaptureCompareValue(PWM_0_INST, ABS(pwmA), GPIO_PWM_0_C0_IDX);
-    } else {  // Í£Ö¹Ê±£¬Çå³ý·½ÏòÒý½Å
+    } else {  // Í£Ö¹Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         DL_GPIO_clearPins(AIN_PORT, AIN_AIN1_PIN | AIN_AIN2_PIN);
         DL_Timer_setCaptureCompareValue(PWM_0_INST, 0, GPIO_PWM_0_C0_IDX);
     }
@@ -57,40 +62,40 @@ void Set_PWM(int pwmA, int pwmB)
 
 
 /***************************************************************************
-º¯Êý¹¦ÄÜ£ºµç»úµÄPID±Õ»·¿ØÖÆ
-Èë¿Ú²ÎÊý£º×óÓÒµç»úµÄ±àÂëÆ÷Öµ
-·µ»ØÖµ  £ºµç»úµÄPWM
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PIDï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+ï¿½ï¿½ï¿½ï¿½Öµ  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PWM
 ***************************************************************************/
 int Velocity_A(int TargetVelocity, int CurrentVelocity)
 {  
-    int Bias;  //¶¨ÒåÏà¹Ø±äÁ¿
-	static int ControlVelocityA, Last_biasA; //¾²Ì¬±äÁ¿£¬º¯Êýµ÷ÓÃ½áÊøºóÆäÖµÒÀÈ»´æÔÚ
-	Bias=TargetVelocity-CurrentVelocity; //ÇóËÙ¶ÈÆ«²î
-	ControlVelocityA+=Velcity_Ki*(Bias-Last_biasA)+Velcity_Kp*Bias;  //ÔöÁ¿Ê½PI¿ØÖÆÆ÷
-                                                               //Velcity_Kp*(Bias-Last_bias) ×÷ÓÃÎªÏÞÖÆ¼ÓËÙ¶È
-	                                                             //Velcity_Ki*Bias             ËÙ¶È¿ØÖÆÖµÓÉBias²»¶Ï»ý·ÖµÃµ½ Æ«²îÔ½´ó¼ÓËÙ¶ÈÔ½´ó
+    int Bias;  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½
+	static int ControlVelocityA, Last_biasA; //ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½
+	Bias=TargetVelocity-CurrentVelocity; //ï¿½ï¿½ï¿½Ù¶ï¿½Æ«ï¿½ï¿½
+	ControlVelocityA+=Velcity_Ki*(Bias-Last_biasA)+Velcity_Kp*Bias;  //ï¿½ï¿½ï¿½ï¿½Ê½PIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                               //Velcity_Kp*(Bias-Last_bias) ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Æ¼ï¿½ï¿½Ù¶ï¿½
+	                                                             //Velcity_Ki*Bias             ï¿½Ù¶È¿ï¿½ï¿½ï¿½Öµï¿½ï¿½Biasï¿½ï¿½ï¿½Ï»ï¿½ï¿½ÖµÃµï¿½ Æ«ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Ô½ï¿½ï¿½
 	Last_biasA=Bias;	
 	if(ControlVelocityA>7000) ControlVelocityA=7000;
 	else if(ControlVelocityA<-7000) ControlVelocityA=-7000;
-	return ControlVelocityA; //·µ»ØËÙ¶È¿ØÖÆÖµ
+	return ControlVelocityA; //ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¿ï¿½ï¿½ï¿½Öµ
 }
 
 /***************************************************************************
-º¯Êý¹¦ÄÜ£ºµç»úµÄPID±Õ»·¿ØÖÆ
-Èë¿Ú²ÎÊý£º×óÓÒµç»úµÄ±àÂëÆ÷Öµ
-·µ»ØÖµ  £ºµç»úµÄPWM
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PIDï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½
+ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+ï¿½ï¿½ï¿½ï¿½Öµ  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PWM
 ***************************************************************************/
 int Velocity_B(int TargetVelocity, int CurrentVelocity)
 {  
-	int Bias;  //¶¨ÒåÏà¹Ø±äÁ¿
-	static int ControlVelocityB, Last_biasB; //¾²Ì¬±äÁ¿£¬º¯Êýµ÷ÓÃ½áÊøºóÆäÖµÒÀÈ»´æÔÚ
-	Bias=TargetVelocity-CurrentVelocity; //ÇóËÙ¶ÈÆ«²î
-	ControlVelocityB+=Velcity_Ki*(Bias-Last_biasB)+Velcity_Kp*Bias;  //ÔöÁ¿Ê½PI¿ØÖÆÆ÷
-                                                               //Velcity_Kp*(Bias-Last_bias) ×÷ÓÃÎªÏÞÖÆ¼ÓËÙ¶È
-	                                                            //Velcity_Ki*Bias             ËÙ¶È¿ØÖÆÖµÓÉBias²»¶Ï»ý·ÖµÃµ½ Æ«²îÔ½´ó¼ÓËÙ¶ÈÔ½´ó
+	int Bias;  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½
+	static int ControlVelocityB, Last_biasB; //ï¿½ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½
+	Bias=TargetVelocity-CurrentVelocity; //ï¿½ï¿½ï¿½Ù¶ï¿½Æ«ï¿½ï¿½
+	ControlVelocityB+=Velcity_Ki*(Bias-Last_biasB)+Velcity_Kp*Bias;  //ï¿½ï¿½ï¿½ï¿½Ê½PIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                               //Velcity_Kp*(Bias-Last_bias) ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Æ¼ï¿½ï¿½Ù¶ï¿½
+	                                                            //Velcity_Ki*Bias             ï¿½Ù¶È¿ï¿½ï¿½ï¿½Öµï¿½ï¿½Biasï¿½ï¿½ï¿½Ï»ï¿½ï¿½ÖµÃµï¿½ Æ«ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Ô½ï¿½ï¿½
 	Last_biasB=Bias;	
 	if(ControlVelocityB>7000) ControlVelocityB=7000;
 	else if(ControlVelocityB<-7000) ControlVelocityB=-7000;
-	return ControlVelocityB; //·µ»ØËÙ¶È¿ØÖÆÖµ
+	return ControlVelocityB; //ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶È¿ï¿½ï¿½ï¿½Öµ
 }
 
