@@ -16,6 +16,7 @@ float LeftSpeed = 0;
 float RightSpeed = 0;
 float BaseSpeed = 1650;
 
+<<<<<<< HEAD
 #define LINE_LOST_STOP_MS 500U
 
 static uint8_t lineLost = 0U;
@@ -25,6 +26,12 @@ uint8_t Line_Tracking_Control(void)
 {
     Update_Sensor_State();  // Read all 5 grayscale sensor states
 
+=======
+void Line_Tracking_Control(void)
+{
+    Update_Sensor_State();  // Read all 5 grayscale sensor states
+
+>>>>>>> e1aa0c5f8d19d4bbc523bcdc01b68d317442ca46
     // ========= Weight method =========
     // Black line = 1, white = 0
     int sum = 0;
@@ -41,6 +48,7 @@ uint8_t Line_Tracking_Control(void)
     {
         // Average deviation value: -90 to +90
         Track = (float)weight / sum;
+<<<<<<< HEAD
         lineLost = 0U;
     }
     else
@@ -56,6 +64,13 @@ uint8_t Line_Tracking_Control(void)
             Set_PWM(0, 0);
             return 0U;
         }
+=======
+    }
+    else
+    {
+        // All sensors detect white (off track): keep last known Track
+        Track = Track;
+>>>>>>> e1aa0c5f8d19d4bbc523bcdc01b68d317442ca46
     }
 
     // ========= PID control =========
@@ -68,7 +83,11 @@ uint8_t Line_Tracking_Control(void)
     RightSpeed = BaseSpeed - Turn;
 
     // Clamp PWM range
+<<<<<<< HEAD
     if (LeftSpeed > MOTOR_PWM_MAX_DUTY)  LeftSpeed = MOTOR_PWM_MAX_DUTY;
+=======
+    if (LeftSpeed > 10000)  LeftSpeed = 10000;
+>>>>>>> e1aa0c5f8d19d4bbc523bcdc01b68d317442ca46
     if (LeftSpeed < 0)      LeftSpeed = 0;
     if (RightSpeed > MOTOR_PWM_MAX_DUTY) RightSpeed = MOTOR_PWM_MAX_DUTY;
     if (RightSpeed < 0)     RightSpeed = 0;
