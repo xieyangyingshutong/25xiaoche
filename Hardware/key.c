@@ -1,78 +1,126 @@
+//#include "key.h"
+
+
+/**************************************************************************
+Function: Key scan
+Input   : Double click the waiting time
+Output  : 0��No action��1��click��2��Double click
+�������ܣ�����ɨ��
+��ڲ�����˫���ȴ�ʱ��
+����  ֵ������״̬ 0���޶��� 1������ 2��˫��
+**************************************************************************/
+//u8 click_N_Double (u8 time)
+//{
+//    static  u8 flag_key,count_key,double_key=0;
+//    static  u16 count_single,Forever_count;
+//    if(DL_GPIO_readPins(KEY_PORT,KEY_key_PIN)>0)  Forever_count++;   //������־λδ��1
+//    else        Forever_count=0;
+//    if((DL_GPIO_readPins(KEY_PORT,KEY_key_PIN)>0)&&0==flag_key)     flag_key=1; //��һ�ΰ���
+//    if(0==count_key)
+//    {
+//            if(flag_key==1)
+//            {
+//                double_key++;
+//                count_key=1;            //��ǰ���һ��
+//            }
+//            if(double_key==3)
+//            {                                       //��������
+//                double_key=0;
+//                count_single=0;
+//                return 2;                   //˫��ִ�е�ָ��
+//            }
+//    }
+//    if(0==DL_GPIO_readPins(KEY_PORT,KEY_key_PIN))          flag_key=0,count_key=0;
+//    if(1==double_key)
+//    {
+//        count_single++;
+//        if(count_single>time&&Forever_count<time)
+//        {
+//            double_key=0;
+//            count_single=0; //��ʱ�����Ϊ˫��
+//			return 1;//����ִ�е�ָ��
+//        }
+//        if(Forever_count>time)
+//        {
+//            double_key=0;
+//            count_single=0;
+//        }
+//    }
+//    return 0;
+//}
+///**************************************************************************
+//Function: Long press detection
+//Input   : none
+//Output  : 0��No action��1��Long press for 2 seconds��
+//�������ܣ��������
+//��ڲ�������
+//����  ֵ������״̬ 0���޶��� 1������2s
+//**************************************************************************/
+//u8 Long_Press(void)
+//{
+//        static u16 Long_Press_count,Long_Press;
+//      if(Long_Press==0&&KEY==0)  Long_Press_count++;   //������־λδ��1
+//    else                       Long_Press_count=0;
+//        if(Long_Press_count>200)        //10msɨ��һ��
+//      {
+//            Long_Press=1;
+//            Long_Press_count=0;
+//            return 1;
+//        }
+//        if(Long_Press==1)     //������־λ��1
+//        {
+//            Long_Press=0;
+//        }
+//        return 0;
+//}
+
+
+//void Key(void)
+//{
+//	u8 tmp,tmp2;
+//	tmp=click_N_Double(50);
+//	if(tmp==1)
+//	{
+//		Flag_Stop=!Flag_Stop;
+//	}		//��������С������ͣ
+//}
+
+// key_logic.c
 #include "key.h"
 #include "oled.h"
 #include "ti_msp_dl_config.h"
 
-/* A square contains four left corners.  L2 is used as the corner marker. */
-#define MIN_TARGET_LAPS        1U
-#define MAX_TARGET_LAPS        5U
-#define CORNERS_PER_LAP        4U
-#define KEY_DEBOUNCE_MS        30U
-#define L2_REARM_LOW_MS        50U
-#define MIN_CORNER_INTERVAL_MS 600U
+int targetCount = 1;      // �û����õ�Ŀ��Ȧ��
+int count1 = 0;           // ÿȦ L2 ����4��
+int count2 = 0;           // ����ɵ�Ȧ��
+int carRunning = 0;       // 1���У�0ֹͣ
 
-uint8_t targetCount = MIN_TARGET_LAPS;
-uint8_t count1 = 0U;
-uint8_t count2 = 0U;
-uint8_t carRunning = 0U;
+ 
+uint32_t lastCount1Time = 0; // �ϴ� count1 ����ʱ��
+int L2_last = 0;
 
-static uint8_t runFinished = 0U;
-static uint8_t runLineLost = 0U;
-static uint8_t l2Previous = 0U;
-static uint8_t cornerArmed = 0U;
-static uint8_t cornerSeen = 0U;
-static uint32_t lastCornerTime = 0U;
-static uint32_t l2LowSince = 0U;
 
-typedef struct {
-    uint8_t rawPressed;
-    uint8_t stablePressed;
-    uint32_t rawChangedAt;
-} DebouncedKey;
-
-static DebouncedKey nextKey = {0U, 0U, 0U};
-static DebouncedKey confirmKey = {0U, 0U, 0U};
-
-static uint8_t Key_PressedEvent(DebouncedKey *key, uint8_t rawPressed)
-{
-    if (rawPressed != key->rawPressed) {
-        key->rawPressed = rawPressed;
-        key->rawChangedAt = tick_ms;
+// ---------------------- ������⺯�� ----------------------
+int Get_Key_Next(void) {
+    if (!DL_GPIO_readPins(KEY_KEY1_PORT, KEY_KEY1_KEY1_PIN)) {
+        delay_ms(10);
+        if (!DL_GPIO_readPins(KEY_KEY1_PORT, KEY_KEY1_KEY1_PIN)) return 1;
     }
-
-    if ((key->stablePressed != key->rawPressed) &&
-        ((uint32_t)(tick_ms - key->rawChangedAt) >= KEY_DEBOUNCE_MS)) {
-        key->stablePressed = key->rawPressed;
-        return key->stablePressed;
+    return 0;
+}
+int Get_Key_Confirm(void) {
+    if (!DL_GPIO_readPins(KEY_KEY2_PORT, KEY_KEY2_KEY2_PIN)) {
+        delay_ms(10);
+        if (!DL_GPIO_readPins(KEY_KEY2_PORT, KEY_KEY2_KEY2_PIN)) return 1;
     }
-    return 0U;
+    return 0;
 }
 
-static void Reset_RunProgress(void)
-{
-    count1 = 0U;
-    count2 = 0U;
 
-    /* Capture the current level so starting on a black line is not a corner. */
-    l2Previous = DL_GPIO_readPins(SENSOR_L2_PORT, SENSOR_L2_PIN) ? 1U : 0U;
-    cornerArmed = 0U;
-    cornerSeen = 0U;
-    lastCornerTime = tick_ms;
-    l2LowSince = tick_ms;
-}
-
-void Handle_Keys(void)
-{
-    uint8_t nextPressed =
-        (DL_GPIO_readPins(KEY_KEY1_PORT, KEY_KEY1_KEY1_PIN) == 0U);
-    uint8_t confirmPressed =
-        (DL_GPIO_readPins(KEY_KEY2_PORT, KEY_KEY2_KEY2_PIN) == 0U);
-
-    if (Key_PressedEvent(&nextKey, nextPressed) != 0U) {
-        if (carRunning == 0U) {
-            if ((runFinished != 0U) || (runLineLost != 0U)) {
-                count1 = 0U;
-                count2 = 0U;
-            }
+// ---------------------- ���������߼� ----------------------
+void Handle_Keys(void) {
+    if (!carRunning) {
+        if (Get_Key_Next()) {
             targetCount++;
             if (targetCount > MAX_TARGET_LAPS) {
                 targetCount = MIN_TARGET_LAPS;
@@ -82,23 +130,21 @@ void Handle_Keys(void)
             OLED_UpdateTarget();
             OLED_UpdateProgress();
         }
-    }
-
-    if (Key_PressedEvent(&confirmKey, confirmPressed) != 0U) {
-        if (carRunning == 0U) {
-            Reset_RunProgress();
-            runFinished = 0U;
-            runLineLost = 0U;
-            carRunning = 1U;
+        if (Get_Key_Confirm()) {
+            carRunning = 1;
+            count1 = 0;
+            count2 = 0;
+            lastCount1Time = Systick_getTick();
+            OLED_ShowString(3, 1, "follow...", 1);
             OLED_UpdateProgress();
             OLED_UpdateStatus();
         }
     }
 }
 
-void Check_L2_Update(void)
-{
-    uint8_t l2Current = DL_GPIO_readPins(SENSOR_L2_PORT, SENSOR_L2_PIN) ? 1U : 0U;
+// ---------------------- L2��� + Ȧ���ж� ----------------------
+void Check_L2_Update(void) {
+    int L2_current = DL_GPIO_readPins(SENSOR_L2_PORT, SENSOR_L2_PIN) ? 1 : 0;
 
     if (l2Current == 0U) {
         if (l2Previous != 0U) {
@@ -114,11 +160,13 @@ void Check_L2_Update(void)
         cornerSeen = 1U;
         cornerArmed = 0U;
         count1++;
+        lastCount1Time = Systick_getTick();
+    }
+    L2_last = L2_current;
 
-        /* A corner must be preceded by a stable L2-low period and be far
-         * enough from the prior corner.  This rejects normal steering sway. */
-        if (count1 == CORNERS_PER_LAP) {
-            count1 = 0U;
+    if ((Systick_getTick() - lastCount1Time > 3000) && count1 > 0) {
+        if (count1 >= 4) {
+            count1 = 0;
             count2++;
             OLED_UpdateProgress();
 
@@ -143,64 +191,29 @@ void Stop_Car_OnLineLost(void)
     OLED_UpdateStatus();
 }
 
-void OLED_UpdateTarget(void)
-{
-    OLED_ShowString(1, 1, "Target:", 1);
-    OLED_ShowNum(1, 9, targetCount, 1, 1);
+void OLED_UpdateTarget(void) {
+    OLED_ShowString(1, 1, "Target:", 1);             // ��1����ʾĿ��Ȧ��
+    OLED_ShowNum(1, 9, targetCount, 1, 1);           // ��ʾ���֣��п��ң�
 }
 
-void OLED_UpdateProgress(void)
-{
-    OLED_ShowString(2, 1, "Done:", 1);
+void OLED_UpdateProgress(void) {
+    OLED_ShowString(2, 1, "Done:", 1);               // ��2�������Ȧ��
     OLED_ShowNum(2, 7, count2, 1, 1);
     OLED_ShowString(2, 8, "/", 1);
     OLED_ShowNum(2, 9, targetCount, 1, 1);
 }
 
-void OLED_UpdateStatus(void)
-{
-    static uint8_t lastStatus = 0xFFU;
-    uint8_t status;
-
-    if (carRunning != 0U) {
-        status = 0U;
-    } else if (runFinished != 0U) {
-        status = 1U;
-    } else if (runLineLost != 0U) {
-        status = 2U;
-    } else {
-        status = 3U;
-    }
-
-    if (status == lastStatus) {
-        return;
-    }
-    lastStatus = status;
-
-    if (status == 0U) {
-        OLED_ShowString(3, 1, "Status: Running      ", 1);
-    } else if (status == 1U) {
-        OLED_ShowString(3, 1, "Status: Finished     ", 1);
-    } else if (status == 2U) {
-        OLED_ShowString(3, 1, "Status: Line Lost    ", 1);
+void OLED_UpdateStatus(void) {
+    if (carRunning) {
+        OLED_ShowString(3, 1, "Status: Running ", 1); //��3����ʾ״̬
     } else {
         OLED_ShowString(3, 1, "Status: Set 1-5      ", 1);
     }
 }
 
-void OLED_UpdateDebug(void)
-{
-    static uint8_t lastCount1 = 0xFFU;
-    static uint8_t lastCount2 = 0xFFU;
-
-    if ((count1 == lastCount1) && (count2 == lastCount2)) {
-        return;
-    }
-    lastCount1 = count1;
-    lastCount2 = count2;
-
-    OLED_ShowString(4, 1, "C1:", 1);
-    OLED_ShowNum(4, 4, count1, 1, 1);
-    OLED_ShowString(4, 7, "C2:", 1);
+void OLED_UpdateDebug(void) {
+    OLED_ShowString(4, 1, "C1:", 1);                 // ��ʾ count1
+    OLED_ShowNum(4, 4, count1, 2, 1);
+    OLED_ShowString(4, 7, "C2:", 1);                 // ��ʾ count2
     OLED_ShowNum(4, 10, count2, 1, 1);
 }
