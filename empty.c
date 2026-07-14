@@ -34,11 +34,29 @@
 #include "PID.h"
 #include "oled.h"
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 4b687cd0abd71fc2d47a59400a67d6c33b945f06
 int main(void)
 {
     SYSCFG_DL_init();
     /* Use the 1 ms tick required by delay_ms(), key debounce and lap timing. */
     SysTick_Init();
+<<<<<<< HEAD
+=======
+=======
+// External variables from key.c
+extern int carRunning;
+
+// Function from PID.c
+void Line_Tracking_Control(void);
+
+int main(void)
+{
+    SYSCFG_DL_init();
+>>>>>>> e1aa0c5f8d19d4bbc523bcdc01b68d317442ca46
+>>>>>>> 4b687cd0abd71fc2d47a59400a67d6c33b945f06
     DL_Timer_startCounter(PWM_0_INST);
     NVIC_ClearPendingIRQ(ENCODERA_INT_IRQN);
     NVIC_ClearPendingIRQ(ENCODERB_INT_IRQN);
@@ -50,8 +68,17 @@ int main(void)
     OLED_Init();
     OLED_CLS();
     OLED_UpdateTarget();
+<<<<<<< HEAD
     OLED_UpdateProgress();
     OLED_UpdateStatus();
+=======
+<<<<<<< HEAD
+    OLED_UpdateProgress();
+    OLED_UpdateStatus();
+=======
+    OLED_ShowString(3, 1, "waiting", 1);
+>>>>>>> e1aa0c5f8d19d4bbc523bcdc01b68d317442ca46
+>>>>>>> 4b687cd0abd71fc2d47a59400a67d6c33b945f06
     Set_PWM(0,0);
 
     while (1)
